@@ -7,8 +7,12 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.svalero.extremedownhill.ExtremeDownhill;
+import com.svalero.extremedownhill.entities.Boar;
+import com.svalero.extremedownhill.entities.Eagle;
+import com.svalero.extremedownhill.entities.NPC;
 import com.svalero.extremedownhill.entities.Obstacle;
 import com.svalero.extremedownhill.entities.Player;
+import com.svalero.extremedownhill.entities.Snake;
 import com.svalero.extremedownhill.ui.HUD;
 
 import java.util.ArrayList;
@@ -22,20 +26,23 @@ public class GameScreen implements Screen {
     private final ShapeRenderer shapeRenderer;
     private final Player player;
     private final OrthographicCamera camera;
-    private HUD hud;
+    private final HUD hud;
 
     // Suelo
     private static final float GROUND_HEIGHT = 80f;
+    private static final float PLAYER_Y = GROUND_HEIGHT + 80f;
 
     // Obstáculos
     private final List<Obstacle> obstacles = new ArrayList<>();
     private final Random random = new Random();
-    private float nextObstacleX;
+    private float nextObstacleX = 600f;
 
-    // Distancia recorrida
+    // NPCs
+    private final List<NPC> npcs = new ArrayList<>();
+    private float nextNpcX = 800f;
+
+    // Distancia y vidas
     private float distance = 0f;
-
-    // Vidas
     private int lives = 3;
     private float invincibleTimer = 0f;
 
@@ -47,24 +54,38 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 480);
 
-        this.player = new Player(100, GROUND_HEIGHT + 80);
-        player.groundY = GROUND_HEIGHT + 80;
+        this.player = new Player(100, PLAYER_Y);
+        player.groundY = PLAYER_Y;
 
-        nextObstacleX = 600f;
-
-        hud = new HUD(batch);
+        this.hud = new HUD(batch);
     }
 
     private void spawnObstacle() {
         float width = 30 + random.nextFloat() * 30;
         float height = 30 + random.nextFloat() * 40;
-        obstacles.add(new Obstacle(nextObstacleX, GROUND_HEIGHT + 80, width, height));
+        obstacles.add(new Obstacle(nextObstacleX, PLAYER_Y, width, height));
         nextObstacleX += 300 + random.nextFloat() * 400;
+    }
+
+    private void spawnNpc() {
+        int type = random.nextInt(3);
+        float spawnY = PLAYER_Y;
+        switch (type) {
+            case 0:
+                npcs.add(new Boar(nextNpcX, spawnY));
+                break;
+            case 1:
+                npcs.add(new Eagle(nextNpcX, spawnY + 100));
+                break;
+            case 2:
+                npcs.add(new Snake(nextNpcX, spawnY));
+                break;
+        }
+        nextNpcX += 400 + random.nextFloat() * 500;
     }
 
     @Override
     public void render(float delta) {
-        // Timers
         if (invincibleTimer > 0) invincibleTimer -= delta;
 
         // Actualizar jugador
@@ -72,12 +93,16 @@ public class GameScreen implements Screen {
         player.x += player.getSpeed() * delta;
         distance += player.getSpeed() * delta;
 
-        // Generar obstáculos
-        if (player.x + 800 > nextObstacleX) {
-            spawnObstacle();
+        // Generar obstáculos y NPCs
+        if (player.x + 800 > nextObstacleX) spawnObstacle();
+        if (player.x + 800 > nextNpcX) spawnNpc();
+
+        // Actualizar NPCs
+        for (NPC npc : npcs) {
+            npc.update(delta, player);
         }
 
-        // Colisiones
+        // Colisiones con obstáculos
         for (Obstacle obstacle : obstacles) {
             if (obstacle.collidesWith(player) && invincibleTimer <= 0) {
                 lives--;
@@ -89,8 +114,21 @@ public class GameScreen implements Screen {
             }
         }
 
-        // Eliminar obstáculos fuera de pantalla
+        // Colisiones con NPCs
+        for (NPC npc : npcs) {
+            if (npc.collidesWith(player) && invincibleTimer <= 0) {
+                lives--;
+                invincibleTimer = 2f;
+                if (lives <= 0) {
+                    game.setScreen(new MenuScreen(game));
+                    return;
+                }
+            }
+        }
+
+        // Limpiar fuera de pantalla
         obstacles.removeIf(o -> o.x < player.x - 600);
+        npcs.removeIf(n -> n.x < player.x - 600);
 
         // Cámara
         camera.position.x = player.x + 300;
@@ -117,7 +155,12 @@ public class GameScreen implements Screen {
             obstacle.render(shapeRenderer);
         }
 
-        // Jugador (parpadea si es invencible)
+        // NPCs
+        for (NPC npc : npcs) {
+            npc.render(shapeRenderer);
+        }
+
+        // Jugador
         if (invincibleTimer <= 0 || (int)(invincibleTimer * 10) % 2 == 0) {
             player.render(shapeRenderer);
         }
