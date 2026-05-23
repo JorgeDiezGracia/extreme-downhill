@@ -21,6 +21,11 @@ public class MenuScreen implements Screen {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1); // fondo oscuro
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Pulsar Enter para empezar
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
+            game.setScreen(new GameScreen(game));
+        }
+
         // Aquí dibujaremos el menú más adelante
     }
 
