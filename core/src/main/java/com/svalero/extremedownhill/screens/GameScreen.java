@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.svalero.extremedownhill.ExtremeDownhill;
 import com.svalero.extremedownhill.entities.Obstacle;
 import com.svalero.extremedownhill.entities.Player;
+import com.svalero.extremedownhill.ui.HUD;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ public class GameScreen implements Screen {
     private final ShapeRenderer shapeRenderer;
     private final Player player;
     private final OrthographicCamera camera;
+    private HUD hud;
 
     // Suelo
     private static final float GROUND_HEIGHT = 80f;
@@ -49,6 +51,8 @@ public class GameScreen implements Screen {
         player.groundY = GROUND_HEIGHT + 80;
 
         nextObstacleX = 600f;
+
+        hud = new HUD(batch);
     }
 
     private void spawnObstacle() {
@@ -77,9 +81,8 @@ public class GameScreen implements Screen {
         for (Obstacle obstacle : obstacles) {
             if (obstacle.collidesWith(player) && invincibleTimer <= 0) {
                 lives--;
-                invincibleTimer = 2f; // 2 segundos de invencibilidad
+                invincibleTimer = 2f;
                 if (lives <= 0) {
-                    // Game over - volver al menú
                     game.setScreen(new MenuScreen(game));
                     return;
                 }
@@ -120,6 +123,9 @@ public class GameScreen implements Screen {
         }
 
         shapeRenderer.end();
+
+        // HUD
+        hud.render(lives, player.getSpeed(), distance);
     }
 
     @Override public void show() {}
@@ -132,5 +138,6 @@ public class GameScreen implements Screen {
     public void dispose() {
         batch.dispose();
         shapeRenderer.dispose();
+        hud.dispose();
     }
 }
